@@ -119,7 +119,7 @@ for i, val in enumerate(l):
         R_hydro = In['C_wetToNominal']*In['A_CS'] / (np.pi * (D[i] + (tw*2)))
         D_eq = 4*R_hydro
         hl_calc = hf.findhl(In['Cpl'], D_eq, In['rhol'], v_l, In['mul'], In['A_CS'], In['m_dot_l'], In['kl'])
-        print(hl_calc)
+        # print(hl_calc)
     else:
         hl_calc = hl
 
@@ -156,6 +156,8 @@ ax[1].set_title(titleText, fontsize = 15)
 ax[1].plot(l,Tl, linestyle = '-', color = 'k', label = '$T_l$, Bulk Liquid')
 ax[1].plot(l,Twl, linestyle = '--', color = 'k', label = '$T_{wl}$, Wall Liquid Side')
 ax[1].plot(l,Twg, linestyle = '-.', color = 'k',  label = '$T_{wg}$, Wall Gas Side')
+ax[1].axhline(y = In['T_boil'], color = 'tab:red', linestyle = '-', label = '$T_{{vap}}$, Liquid Vapor/Boiling Temperature')
+ax[1].axhline(y = In['T_boil'] + In['dT_nucleate'], color = 'tab:red', linestyle = '--', label = '$T_{{nucleate}}$ Wall Liquid Side Threshold' )
 
 ax[1].set_xlabel('Axial Position, m')
 ax[1].set_ylabel('Temperature, K')
