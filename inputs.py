@@ -2,21 +2,34 @@ def input():
 
     In = {
 
-        'Tc'        : 3300,
-        'Tl0'       : 80,
+        'Tc'            : 'perf.csv', # or 'filename.csv' for importing contours
+        'Tl0'           : 80,
 
-        'hg'        : 147,
-        'hl'        : 206e3,
+        'hg'            : 'calculate', # or 'calculate'
+        'Cpg'           : 5.9e3,
+        'mug'           : 1.07e-4,
+        'kg'            : 14.0e-1,
+        
+        'hl'            : 'calculate', # or 'calculate'
+        'Cpl'           : 1.66e3,
+        'm_dot_l'       : 2.97,
+        'C_wetToNominal': 1, # Account for increased surface area from grooves tubes etc.
+        'A_CS'          : 10*1.2e-3,
+        'mul'           : 2.652e-4,
+        'rhol'          : 1199,
+        'kl'            : 0.168,
 
-        'Cpl'       : 1.71e3,
+        'tw'            : 3e-3,
+        'kw'            : 45,
 
-        'tw'        : 1e-3,
-        'kw'        : 43,
+        'flowdir'       : 'AF', # FA (FWD-AFT) or AF (AFT-FWD)
 
-        'm_dot_l'   : 2.97,
-        'l_c'       : .25, # or 'import'
-        'D_c'       : .15,
-        'N_nodes'   : 20,
+        
+        'l_c'           : 'contour.csv', # or 'filename.csv' for importing contours
+        'D_c'           : .15, # or 'filename.csv' for importing contours
+        'N_nodes'       : 200,
+
+        'l_modifier'    :1e-3,
             
     }
 

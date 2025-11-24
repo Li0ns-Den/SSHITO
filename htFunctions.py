@@ -20,9 +20,16 @@ def findTwl(Twg, q, tw, kw):
 
 def findhg(rho, v, D, Pr, kg, mu):
 
-    hg = 0.026*(((rho*v)**0.8)/(D**0.2))*(Pr**0.4)*(kg / (mu**0.8))
+    # hg = 0.026*(((rho*v)**0.8)/(D**0.2))*(Pr**0.4)*(kg / (mu**0.8))
+    hg = (rho*v)**0.8
 
     return hg
+
+def findPr(Cp,mu,k):
+
+    Pr = Cp*mu/k
+
+    return Pr
 
 def findhl(Cp, D, rho, v, mu, A, m_dot, kl):
 
