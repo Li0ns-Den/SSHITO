@@ -1,8 +1,8 @@
 import numpy as np
 
-def findFluxTotal(Tc, Tl, hg, hl, tw, kw):
+def findFluxTotal(Tc, Tl, hg, hl, tw, kw, AR_surf):
 
-    q = (Tc-Tl)/((1/hg)+(tw/kw)+(1/hl))
+    q = (Tc-Tl)/((1/hg)+(tw/kw)+(1/(hl*AR_surf)))
 
     return q
 
@@ -42,3 +42,22 @@ def finddT(q, m_dot, Cp, A):
     dT = (q*A) / (m_dot*Cp)
     
     return dT
+
+def finddP(f,L,d,rho,v):
+
+    dP = - f*(L/d)*((rho*(v**2))/(2))
+
+    return dP
+
+def FricCoeff(v,D,mu,rho,roughness):
+
+    Re = v*D / (mu/rho)
+    rel_rough = roughness/D
+
+    # Niazkar's solution to calculate Darcy-Weisbach Friction Coefficient
+    A = np.log10((rel_rough/3.7) + (4.5547/Re**0.8784))*-2
+    B = np.log10((rel_rough/3.7) + ((2.51*A)/Re))*-2
+    C = np.log10((rel_rough/3.7) + ((2.51*B)/Re))*-2
+    f_prop = (1/(A-(((B-A)**2)/(C-(2*B)+A))))**2
+
+    return f_prop

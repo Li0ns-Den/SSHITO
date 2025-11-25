@@ -1,7 +1,9 @@
 import numpy as np
+from pyfluids import Fluid, FluidsList, Input, Phases
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import htFunctions as hf
+import arrayEditor as ae
 import readcsv as rcsv
 import inputs
 
@@ -30,6 +32,8 @@ m_dot_l     = In['m_dot_l']
 N_n         = In['N_nodes']
 Cpl         = In['Cpl']
 
+if In['pyfluids'] == True:
+    liqObj = In['liqType']
 
 if isinstance(l_c, str) or isinstance(D_c, str):
     if l_c.endswith('.csv') or D_c.endswith('.csv'):
@@ -93,18 +97,55 @@ Twl         = np.zeros(len(l))
 dQ          = np.zeros(len(l))
 D_wl        = np.zeros(len(l))
 D_chn      = np.zeros(len(l))
+v_l          = np.zeros(len(l))
+P_l         = np.zeros(len(l))
 
 dT          = 0
 
 
 Tl[0]       = Tl0
+P_l[0]       = In['P_liq']
+
+if In['adjust_Acs'] == True or In['adjust_AR_surf'] == True:
+
+    fig, ax0 = plt.subplots()
+    ax0.plot(l,D/2, linestyle = '-', color = 'tab:orange', label = 'Gas Side Wall')
+    ax0.set_xlabel('Axial Position, m')
+    ax0.set_ylabel('Radial Position, m')
+    ax0.set_ylim([0, (D.max() + D.max()*0.1) / 2])
+    ax0.set_aspect('equal')
+    ax0.grid()
+    ax0.minorticks_on()
+    ax0.grid(which='major', linestyle='-', linewidth='0.5')
+    ax0.grid(which='minor', linestyle=':', linewidth='0.5')
+    ax0.legend()
+
+if In['adjust_Acs'] == True:
+
+    _, A_cs = ae.edit(In['A_cs'],0,l.max(),15,N_n)
+    if In['flowdir'] == 'AF':
+        A_cs = np.flip(A_cs)
+else:
+    A_cs = np.zeros(len(l))
+    A_cs[:] = In['A_cs']
+
+if In['adjust_AR_surf'] == True:
+        
+    _, AR_surf = ae.edit(In['AR_surf'],0,l.max(),15,N_n)
+    if In['flowdir'] == 'AF':
+        AR_surf = np.flip(AR_surf)    
+else:
+    AR_surf = np.zeros(len(l))
+    AR_surf[:] = In['AR_surf']         
 
 for i, val in enumerate(l):
 
     if i == 0:
         Tl[i] = Tl[i]
+        P_l[i] = P_l[i]
     else:
         Tl[i] = Tl[i-1] + dT
+        P_l[i] = P_l[i-1] + dP
 
     if hg == 'calculate':
 
@@ -115,15 +156,29 @@ for i, val in enumerate(l):
         hg_calc = hg
 
     if hl == 'calculate':
-        v_l = In['m_dot_l']/(In['rhol']*In['A_CS'])
-        R_hydro = In['C_wetToNominal']*In['A_CS'] / (np.pi * (D[i] + (tw*2)))
+
+        if In['pyfluids'] == True:
+            liqObj.update(Input.pressure(P_l[i]), Input.temperature(Tl[i]))
+            Cpl = liqObj.specific_heat
+            rhol = liqObj.density
+            mul = liqObj.dynamic_viscosity
+            kl = liqObj.conductivity
+        else:
+            Cpl = In['Cpl']
+            rhol = In['rhol']
+            mul = In['mul']
+            kl = In['kl']
+
+        v_l[i] = In['m_dot_l']/(rhol*A_cs[i])
+
+        R_hydro = A_cs[i] / (np.pi * (AR_surf[i]*D[i] + (tw*2)))
         D_eq = 4*R_hydro
-        hl_calc = hf.findhl(In['Cpl'], D_eq, In['rhol'], v_l, In['mul'], In['A_CS'], In['m_dot_l'], In['kl'])
+        hl_calc = hf.findhl(Cpl, D_eq, rhol, v_l[i], mul, A_cs[i], In['m_dot_l'], kl)
         # print(hl_calc)
     else:
         hl_calc = hl
 
-    q[i] = hf.findFluxTotal(T[i], Tl[i], hg_calc, hl_calc, tw, kw)
+    q[i] = hf.findFluxTotal(T[i], Tl[i], hg_calc, hl_calc, tw, kw, AR_surf[i])
 
     Twg[i] = hf.findTwg(q[i], T[i], hg_calc)
 
@@ -134,11 +189,17 @@ for i, val in enumerate(l):
         A = np.pi*D*dl
 
     dT = hf.finddT(q[i], m_dot_l, Cpl, A)
+ 
+    C_fric = hf.FricCoeff(v_l[i],D_eq,mul,rhol,In['roughness'])
+
+    dP = hf.finddP(C_fric,dl,D_eq,rhol,v_l[i])
+
+    # print(v_l[i])
 
     dQ[i] = q[i]*A
 
     D_wl[i] = D[i] + 2*tw
-    t_chn = (np.sqrt(((4*In['A_CS'])/np.pi)+D_wl[i]**2)-D_wl[i])/2
+    t_chn = (np.sqrt(((4*A_cs[i])/np.pi)+D_wl[i]**2)-D_wl[i])/2
     D_chn[i] = D_wl[i] + t_chn
 
 Q_total = sum(dQ)
@@ -148,7 +209,7 @@ Q_total = sum(dQ)
 #     if not var_name.startswith('_'):  # Skip internal Python vars
 #         print(f"{var_name} = {var_value}")
 
-fig, ax = plt.subplots(2,sharex=True)
+fig, ax = plt.subplots(3,sharex=True)
 
 titleText = f'Wall temperatures @ $T_{{c,max}}$ = {T.max().round(0)}$K$ along axial positions'
 
@@ -185,6 +246,22 @@ ax[0].grid(which='major', linestyle='-', linewidth='0.5')
 ax[0].grid(which='minor', linestyle=':', linewidth='0.5')
 ax[0].legend()
 
+ax[2].set_title('Channel Velocity + Pressures', fontsize = 15)
+ln1 = ax[2].plot(l,P_l/1e5, linestyle = '-', color = 'k', label = '$P_l$, Coolant Pressure')
+ax2 = ax[2].twinx()
+ln2 = ax2.plot(l,v_l, linestyle = '--', color = 'k', label = '$P_l$, Coolant Velocity')
+ax[2].set_xlabel('Axial Position, m')
+ax[2].set_ylabel('Pressure, $bar$')
+ax2.set_ylabel('Velocity, $ms^{-1}$')
+# ax[2].set_ylim([P_l.min()*0.9/1e5, P_l.max()*1.1/1e5])
+# ax2.set_ylim([v_l.min()*0.9, v_l.max()*1.1])
+ax[2].grid()
+ax[2].minorticks_on()
+ax[2].grid(which='major', linestyle='-', linewidth='0.5')
+ax[2].grid(which='minor', linestyle=':', linewidth='0.5')
+lns = ln1+ln2
+labs = [l.get_label() for l in lns]
+ax[2].legend(lns, labs, loc=0)
 
 plt.show()
 
